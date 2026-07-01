@@ -1,0 +1,14 @@
+camera:
+  enabled: true
+  device_index: 0
+
+microphone:
+  enabled: true
+  device_index: 0
+
+speakers:
+  enabled: true
+
+gpio:
+  enabled: true
+  board_mode: BCM
