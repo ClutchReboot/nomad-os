@@ -1,4 +1,4 @@
-"""Text-to-speech placeholder."""
+"""Text-to-speech helpers."""
 
 
 class TextToSpeech:
