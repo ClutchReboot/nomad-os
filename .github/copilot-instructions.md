@@ -15,7 +15,7 @@
 - Keep the project working without requiring hardware for core chat and voice CLI flows.
 
 ## Python version
-- Target Python 3.11+.
+- Target Python 3.14+.
 - Avoid introducing dependencies that break compatibility with the current environment.
 
 ## Code conventions
