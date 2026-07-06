@@ -1,17 +1,19 @@
 """Tests for the voice CLI flow."""
 
-from unittest.mock import patch
 import unittest
-
-from nomad.voice import speech_to_text
+from unittest.mock import patch
 
 from nomad.main import voice_chat
+from nomad.voice import speech_to_text
 from nomad.voice.speech_to_text import SpeechToText
 
 
 class StubSpeechToText:
     def __init__(self, transcripts: list[str]) -> None:
         self._transcripts = transcripts
+
+    def detect_wakeword(self) -> bool:
+        return True
 
     def listen_continuously(self) -> str:
         if not self._transcripts:

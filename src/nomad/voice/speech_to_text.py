@@ -8,6 +8,10 @@ class SpeechToText:
     """Convert microphone audio into text."""
 
     def __init__(self):
+        self.sample_rate = 16000
+        self.duration_seconds = 5.0
+        self.frames = int(self.sample_rate * self.duration_seconds)
+
         # Stored module references to avoid repeated imports
         self._sounddevice = None
         self._numpy = None
@@ -39,31 +43,86 @@ class SpeechToText:
         return self._whisper
 
     def transcribe(self, prompt: str = "") -> str:
+        """Capture microphone audio and convert it to text.
+
+        If a prompt is provided, it is printed before recording begins.
+        The method records a short audio sample, transcribes it with Whisper,
+        and falls back to keyboard input if recording or transcription fails.
+        """
         if prompt:
             print(prompt)
 
         try:
-            sample_rate = 16000
-            duration_seconds = 5.0
-            frames = int(sample_rate * duration_seconds)
-            audio = self.sounddevice.rec(
-                frames,
-                samplerate=sample_rate,
-                channels=1,
-                dtype="float32",
-            )
-            self.sounddevice.wait()
-            audio = self.numpy.asarray(audio, dtype=self.numpy.float32).reshape(-1)
-
+            audio = self._record_audio(self.frames, self.sample_rate)
             peak = self.numpy.max(self.numpy.abs(audio))
+            print(f"Audio peak level: {peak:.4f}")  # Debugging output
             if peak < 0.01:
                 return self._fallback_to_keyboard("")
 
-            return self._transcribe_with_whisper(audio, sample_rate)
+            return self._transcribe_with_whisper(audio, self.sample_rate)
         except Exception:
             return self._fallback_to_keyboard(prompt)
 
-    def _transcribe_with_whisper(self, audio, sample_rate: int) -> str:
+    def detect_wakeword(
+        self,
+        wakeword: str = "nomad",
+        prompt: str = "",
+        duration_seconds: float = 1.5,
+        silence_threshold: float = 0.005,
+    ) -> bool:
+        """Record a short audio sample and check whether a wake word was spoken."""
+        if prompt:
+            print(prompt)
+
+        try:
+            audio = self._record_audio(
+                int(self.sample_rate * duration_seconds),
+                self.sample_rate,
+            )
+            peak = self.numpy.max(self.numpy.abs(audio))
+            if peak < silence_threshold:
+                return False
+
+            transcript = self._transcribe_with_whisper(
+                audio,
+                self.sample_rate,
+                fallback_to_keyboard=False,
+            )
+            if not transcript:
+                return False
+
+            normalized = self._normalize_transcript(transcript)
+            detected = wakeword.lower() in normalized
+            if detected:
+                print("✓ Wake word detected!")
+            return detected
+        except Exception:
+            return False
+
+    def _record_audio(self, frames: int, sample_rate: int):
+        audio = self.sounddevice.rec(
+            frames,
+            samplerate=sample_rate,
+            channels=1,
+            dtype="float32",
+        )
+        self.sounddevice.wait()
+        return self.numpy.asarray(audio, dtype=self.numpy.float32).reshape(-1)
+
+    def _normalize_transcript(self, transcript: str) -> str:
+        return (
+            transcript.strip()
+            .lower()
+            .replace(" ", "")
+            .replace(".", "")
+            .replace(",", "")
+            .replace("!", "")
+            .replace("?", "")
+        )
+
+    def _transcribe_with_whisper(
+        self, audio, sample_rate: int, fallback_to_keyboard: bool = True
+    ) -> str:
         try:
             audio = self.numpy.asarray(audio).reshape(-1)
             peak = self.numpy.max(self.numpy.abs(audio))
@@ -98,7 +157,9 @@ class SpeechToText:
         except Exception:
             pass
 
-        return self._fallback_to_keyboard("")
+        if fallback_to_keyboard:
+            return self._fallback_to_keyboard("")
+        return ""
 
     def _fallback_to_keyboard(self, prompt: str) -> str:
         return input(prompt)

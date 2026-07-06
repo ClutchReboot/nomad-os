@@ -1,8 +1,5 @@
-from nomad.voice import SpeechToText
-from nomad.voice import TextToSpeech
-from nomad.voice import is_stop_command
-from nomad.voice import WakeWordDetector
 from nomad.core.conversation import ConversationService
+from nomad.voice import SpeechToText, TextToSpeech, is_stop_command
 
 
 def voice_chat(
@@ -19,7 +16,6 @@ def voice_chat(
     conversation_service = conversation or ConversationService()
     recognizer = speech_to_text or SpeechToText()
     speaker = text_to_speech or TextToSpeech()
-    detector = WakeWordDetector()
 
     print("Nomad voice chat started. Say 'Nomad' followed by your command.")
     print("To exit, say 'Nomad exit', 'Nomad quit', 'Nomad stop', or 'Nomad bye'.")
@@ -29,7 +25,7 @@ def voice_chat(
     while stop_after is None or processed_turns < stop_after:
         try:
             # Wait for wake-word detection
-            if not detector.listen():
+            if not recognizer.detect_wakeword():
                 continue
 
             print("Wake word detected! Listening for command...")
@@ -43,7 +39,7 @@ def voice_chat(
             continue
 
         command = command.strip().lower()
-        
+
         # Clean up any remnants of wake-word from the command
         command = command.replace("nomad", "").replace("no mad", "").strip()
 
